@@ -109,50 +109,69 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("tap", async ({ points, roomId, playerId, correct }) => {
-    try {
-      let room = await Room.findById(roomId);
-      let player = room.players.find((player) => player.socketID === playerId);
-      player.hasAnswered = true;
-      console.log(player);
+  socket.on(
+    "tap",
+    async ({
+      points,
+      roomId,
+      playerId,
+      correct,
+      question,
+      answer,
+      correctAnswer,
+    }) => {
+      try {
+        let room = await Room.findById(roomId);
+        let player = room.players.find(
+          (player) => player.socketID === playerId
+        );
+        player.hasAnswered = true;
+        player.result.push({
+          question: question,
+          answer: answer,
+          correct: correct,
+          correctAnswer: correctAnswer,
+        });
+        console.log(player.result);
 
-      if (correct) {
-        if (player) {
-          player.points = player.points + points;
-          player.correctAnswer = player.correctAnswer + 1;
-        } else {
-          console.log("Player not found in the room");
-          // res.status(404).json({ message: "Player not found in the room" });
+        if (correct) {
+          if (player) {
+            player.points = player.points + points;
+            player.correctAnswer = player.correctAnswer + 1;
+          } else {
+            console.log("Player not found in the room");
+            // res.status(404).json({ message: "Player not found in the room" });
+          }
+          var roomData = [{ room, playerId: null }];
+          io.to(roomId).emit("updateRoom", room);
         }
+
         var roomData = [{ room, playerId: null }];
         io.to(roomId).emit("updateRoom", room);
+        await room.save();
+
+        // console.log(player);
+        // let choice = room.turn.playerType;
+        // if (room.turnIndex == 0) {
+        //   room.turn = room.players[1];
+        //   room.turnIndex = 1;
+        // } else {
+        //   room.turn = room.players[0];
+        //   room.turnIndex = 0;
+        // }
+        // let player = await playerSchema.findOne({ socketID: "1qpCufsDBAVfqyGLAAAt" });
+        // console.log(player);
+        // room = await room.save();
+        // io.to(roomId).emit("tapped", {
+        //   index,
+        //   choice,
+        //   room,
+        // });
+      } catch (error) {
+        console.log(error);
       }
-
-      var roomData = [{ room, playerId: null }];
-      io.to(roomId).emit("updateRoom", room);
-      await room.save();
-
-      // console.log(player);
-      // let choice = room.turn.playerType;
-      // if (room.turnIndex == 0) {
-      //   room.turn = room.players[1];
-      //   room.turnIndex = 1;
-      // } else {
-      //   room.turn = room.players[0];
-      //   room.turnIndex = 0;
-      // }
-      // let player = await playerSchema.findOne({ socketID: "1qpCufsDBAVfqyGLAAAt" });
-      // console.log(player);
-      // room = await room.save();
-      // io.to(roomId).emit("tapped", {
-      //   index,
-      //   choice,
-      //   room,
-      // });
-    } catch (error) {
-      console.log(error);
     }
-  });
+  );
   socket.on("hasAnswers", async ({ roomId }) => {
     try {
       let room = await Room.findById(roomId);

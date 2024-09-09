@@ -19,8 +19,9 @@ const playerSchema = new mongoose.Schema({
   },
   correctAnswer: {
     default: 0,
-    type: String,
+    type: Number,
   },
+  result: [],
 });
 
 module.exports = playerSchema;
