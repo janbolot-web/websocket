@@ -22,6 +22,7 @@ io.on("connection", (socket) => {
     try {
       const data = JSON.parse(response);
       let room = new Room();
+
       let player = {
         socketID: socket.id,
         nickname,
@@ -76,7 +77,7 @@ io.on("connection", (socket) => {
         room = await room.save();
         // Отправка обновленного игрока и socketID клиенту
         var roomData = [{ room, playerId: socket.id }];
-        io.to(roomId).emit("joinRoomSuccess", roomData);
+        io.to(socket.id).emit("joinRoomSuccess", roomData);
         io.to(roomId).emit("updateRoom", room);
       } else {
         socket.emit(
@@ -182,21 +183,21 @@ io.on("connection", (socket) => {
       console.log(error);
     }
   });
-
-  socket.on("winner", async ({ winnerSocketId, roomId }) => {
+  socket.on("end", async ({ roomId, endGame, playerId }) => {
     try {
       let room = await Room.findById(roomId);
-      let player = room.players.find(
-        (playerr) => playerr.socketID == winnerSocketId
-      );
-      player.points += 1;
-      room = await room.save();
+      const data = {
+        endGame: endGame,
+        playerId: playerId,
+      };
+      let player = room.players.find((player) => player.playerType === "X");
 
-      if (player.points >= room.maxRounds) {
-        io.to(roomId).emit("endGame", player);
-      } else {
-        io.to(roomId).emit("pointIncrease", player);
-      }
+      // Отправляем обновлённые данные комнаты всем игрокам
+      io.to(roomId).emit("updateRoom", room);
+      console.log("player ", player.socketID);
+      // Отправляем событие endGame только инициатору
+      io.to(socket.id).emit("endGame", data);
+      io.to(player.socketID).emit("endGame", data);
     } catch (e) {
       console.log(e);
     }
